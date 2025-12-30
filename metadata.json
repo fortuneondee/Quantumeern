@@ -1,0 +1,7 @@
+{
+  "name": "USDT Quantum Earn - High Yield Staking",
+  "description": "A professional USDT earning platform with automated daily ROI, multi-level referral systems, and custodial wallet management.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
