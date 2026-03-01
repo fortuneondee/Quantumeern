@@ -1,15 +1,20 @@
+
 import React, { useState } from 'react';
 import { User } from '../types.ts';
+import { regenerateUserApiKey } from '../store.ts';
 import { motion } from 'framer-motion';
 
 interface ProfileProps {
   user: User;
   onUpdate: (data: Partial<User>) => Promise<void>;
+  appName: string;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
+const Profile: React.FC<ProfileProps> = ({ user, onUpdate, appName }) => {
   const [withdrawalAddress, setWithdrawalAddress] = useState(user.withdrawalAddress || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isRegeneratingKey, setIsRegeneratingKey] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +26,19 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       alert(`Error updating profile: ${err.message}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRegenerateKey = async () => {
+    if (!confirm("Are you sure? This will invalidate your old API key.")) return;
+    setIsRegeneratingKey(true);
+    try {
+        await regenerateUserApiKey(user.id);
+        alert("New API Key generated.");
+    } catch (err: any) {
+        alert("Error: " + err.message);
+    } finally {
+        setIsRegeneratingKey(false);
     }
   };
 
@@ -87,6 +105,40 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               </button>
             </form>
           </section>
+
+          <section className="space-y-8">
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] border-b border-app-border pb-4 text-app-text">Developer Access</h2>
+            <div className="p-10 border border-app-border bg-app-surface space-y-6">
+                <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Personal API Key</label>
+                        <button onClick={() => setShowApiKey(!showApiKey)} className="text-[10px] font-bold text-app-accent uppercase">{showApiKey ? 'Hide' : 'Reveal'}</button>
+                    </div>
+                    <div className="flex gap-2">
+                        <input 
+                            readOnly 
+                            type={showApiKey ? "text" : "password"} 
+                            value={user.apiKey || "No API Key"} 
+                            className="flex-1 bg-app-bg border border-app-border p-3 font-mono text-xs text-app-text" 
+                        />
+                        <button 
+                            onClick={() => { navigator.clipboard.writeText(user.apiKey || ""); alert("Copied"); }} 
+                            className="px-4 border border-app-border hover:bg-app-text hover:text-app-bg transition-colors"
+                        >
+                            <i className="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                    <p className="text-[9px] text-app-muted">Use this key to connect external AI agents or portfolio trackers to your account.</p>
+                </div>
+                <button 
+                    onClick={handleRegenerateKey}
+                    disabled={isRegeneratingKey}
+                    className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400"
+                >
+                    {isRegeneratingKey ? 'Generating...' : 'Regenerate API Key'}
+                </button>
+            </div>
+          </section>
         </div>
 
         <div className="lg:col-span-5 space-y-12">
@@ -113,7 +165,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
           <div className="p-12 bg-app-accent text-app-accent-text space-y-6">
             <h3 className="text-[10px] font-black uppercase tracking-[0.4em]">Account Info</h3>
             <p className="text-xs font-medium leading-relaxed">
-              Your profile is linked to the Quantum Network. All your investments and earnings are tied to this account.
+              Your profile is linked to the {appName} Network. All your investments and earnings are tied to this account.
             </p>
             <div className="pt-4 border-t border-app-accent-text/10">
                <p className="text-[8px] font-black uppercase tracking-widest opacity-40">Referred By</p>

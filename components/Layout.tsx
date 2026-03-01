@@ -1,6 +1,6 @@
-import React from 'react';
-import { User } from '../types.ts';
-import { APP_NAME } from '../constants.tsx';
+
+import React, { useMemo } from 'react';
+import { User, AppState } from '../types.ts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../ThemeContext.tsx';
 
@@ -10,9 +10,21 @@ interface LayoutProps {
   onLogout: () => void;
   onNavigate: (view: string) => void;
   currentView: string;
+  appName: string;
+  platformSettings?: AppState['platformSettings'];
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, currentView }) => {
+// Simulated User Data (Nigerian Names)
+const NIGERIAN_NAMES = [
+  "Adebayo", "Chioma", "Emeka", "Funke", "Ibrahim", "Ngozi", "Oluwaseun", "Yusuf", "Zainab", 
+  "Chinedu", "Folake", "Musa", "Kemi", "Tunde", "Amaka", "Bolaji", "Uche", "Fatima", "Sola", 
+  "Habiba", "Tope", "Chika", "Ahmed", "Bisi", "Gambo", "Idris", "Kehinde", "Lola", "Mohammed", 
+  "Nneka", "Olamide", "Patience", "Rasheed", "Simi", "Tolu", "Umar", "Victor", "Wale", "Xavier", 
+  "Yemi", "Zahra", "Abiodun", "Blessing", "Chijioke", "Damilola", "Efe", "Femi", "Gideon", 
+  "Halima", "Iyabo", "Jide", "Kelechi", "Lukman", "Maryam", "Nnamdi", "Osas", "Peter", "Queen"
+];
+
+const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, currentView, appName, platformSettings }) => {
   // Allow access if explicitly admin OR if email contains 'admin' (failsafe)
   const hasAdminAccess = user ? (user.isAdmin || user.email.toLowerCase().includes('admin')) : false;
   const { theme, toggleTheme } = useTheme();
@@ -26,8 +38,33 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, c
     ...(hasAdminAccess ? [{ id: 'admin', label: 'Admin', icon: 'fa-terminal' }] : [])
   ] : [];
 
+  // Generate the ticker items once
+  const tickerItems = useMemo(() => {
+    // Create a deterministic but randomized-looking list based on the static array
+    const baseItems = NIGERIAN_NAMES.map(name => {
+      const amount = (Math.random() * 500 + 50).toFixed(2);
+      return { name, amount };
+    });
+    // Duplicate for smooth loop
+    return [...baseItems, ...baseItems];
+  }, []);
+
   return (
-    <div className="min-h-screen flex bg-app-bg transition-colors duration-300">
+    <div className="min-h-screen flex bg-app-bg transition-colors duration-300 relative pb-16 lg:pb-0">
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          display: flex;
+          animation: marquee 120s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+      
       {/* High-Contrast Sidebar (Desktop) */}
       {user && (
         <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 bg-app-bg border-r border-app-border p-8 transition-colors duration-300">
@@ -38,7 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, c
             <div className="w-8 h-8 bg-app-accent flex items-center justify-center transition-colors">
               <div className="w-4 h-4 bg-app-bg transition-colors"></div>
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase text-app-text transition-colors">{APP_NAME}</span>
+            <span className="text-xl font-black tracking-tighter uppercase text-app-text transition-colors">{appName}</span>
           </div>
 
           <nav className="flex-1 space-y-4">
@@ -76,11 +113,11 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, c
       )}
 
       {/* Main viewport */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 z-0">
         <header className="h-20 bg-app-bg border-b border-app-border flex items-center justify-between px-8 lg:px-12 sticky top-0 z-40 transition-colors duration-300">
           <div className="lg:hidden flex items-center gap-4">
             <div className="w-6 h-6 bg-app-accent transition-colors"></div>
-            <span className="text-lg font-black uppercase tracking-tighter text-app-text transition-colors">{APP_NAME}</span>
+            <span className="text-lg font-black uppercase tracking-tighter text-app-text transition-colors">{appName}</span>
           </div>
           
           <div className="hidden lg:block">
@@ -128,7 +165,25 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, c
           )}
         </header>
 
-        <main className="flex-1 p-8 lg:p-12 overflow-x-hidden bg-app-bg transition-colors duration-300">
+        {/* Withdrawal Ticker */}
+        {user && platformSettings?.withdrawalTickerEnabled && (
+          <div className="bg-app-surface border-b border-app-border overflow-hidden h-8 flex items-center relative z-0">
+             <div className="animate-marquee whitespace-nowrap">
+                {tickerItems.map((item, idx) => (
+                   <div key={idx} className="inline-flex items-center gap-2 mx-8 opacity-70">
+                      <i className="fa-solid fa-circle-check text-green-500 text-[8px]"></i>
+                      <span className="text-[9px] font-bold text-app-text uppercase">{item.name}</span>
+                      <span className="text-[9px] font-medium text-app-muted">just withdrew daily profit</span>
+                   </div>
+                ))}
+             </div>
+             {/* Gradient fade masks */}
+             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-app-bg to-transparent pointer-events-none"></div>
+             <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-app-bg to-transparent pointer-events-none"></div>
+          </div>
+        )}
+
+        <main className="flex-1 p-8 lg:p-12 pb-24 overflow-x-hidden bg-app-bg transition-colors duration-300">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -145,7 +200,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, c
 
       {/* Mobile Footer Navigation */}
       {user && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-app-bg border-t border-app-border flex justify-around items-center z-50 transition-colors duration-300">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-app-bg border-t border-app-border flex justify-around items-center z-[100] transition-colors duration-300">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -166,6 +221,17 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onNavigate, c
           </button>
         </nav>
       )}
+
+      {/* Floating Telegram Support Button */}
+      <a
+        href="https://t.me/Profitpipsnodes"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-20 right-4 lg:bottom-8 lg:right-8 z-[60] w-12 h-12 lg:w-14 lg:h-14 bg-app-accent text-app-accent-text rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all duration-300"
+        title="Contact Support"
+      >
+        <i className="fa-brands fa-telegram text-2xl lg:text-3xl"></i>
+      </a>
     </div>
   );
 };

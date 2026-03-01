@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type Theme = 'dark' | 'light';
@@ -14,7 +15,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     // Load saved theme
-    const savedTheme = localStorage.getItem('quantum-theme') as Theme;
+    const savedTheme = localStorage.getItem('profitpips-theme') as Theme;
     if (savedTheme) {
       setTheme(savedTheme);
     }
@@ -28,7 +29,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       html.classList.remove('light');
     }
-    localStorage.setItem('quantum-theme', theme);
+    localStorage.setItem('profitpips-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {

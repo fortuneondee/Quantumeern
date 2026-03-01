@@ -26,8 +26,8 @@ const QuantumAnalyst: React.FC<AnalystProps> = ({ user, transactions, activePack
       User Profile: Capital=${user.capitalBalance} USDT, Profit=${user.profitBalance} USDT, Total Earned=${user.totalEarned} USDT.
       Nodes Active: ${activePackages.length}.
       Transactions: ${transactions.length} total.
-      The platform is QuantumEarn, a high-yield TRC20 staking protocol.
-      Answer professionally as the "Quantum AI Analyst".
+      The platform is Profit Pips, a high-yield TRC20 staking protocol.
+      Answer professionally as the "Profit Pips AI Analyst".
     `;
 
     try {
@@ -49,7 +49,7 @@ const QuantumAnalyst: React.FC<AnalystProps> = ({ user, transactions, activePack
   return (
     <div className="max-w-7xl mx-auto space-y-16">
       <div className="flex flex-col gap-4">
-        <h1 className="text-6xl lg:text-9xl font-black uppercase tracking-tighter leading-[0.85]">Quantum<br/>Analyst.</h1>
+        <h1 className="text-6xl lg:text-9xl font-black uppercase tracking-tighter leading-[0.85]">Profit<br/>Analyst.</h1>
         <p className="serif italic text-2xl text-white/40 max-w-xl">
           Powered by Gemini 3 Pro reasoning. Get real-time protocol insights and growth strategies.
         </p>
@@ -122,7 +122,7 @@ const QuantumAnalyst: React.FC<AnalystProps> = ({ user, transactions, activePack
                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em]">Gemini 3 Pro Active</h4>
               </div>
               <p className="text-xs font-bold leading-relaxed">
-                The Quantum Analyst utilizes advanced reasoning models to decode blockchain patterns and provide tailor-made financial guidance for your staking identity.
+                The Profit Pips Analyst utilizes advanced reasoning models to decode blockchain patterns and provide tailor-made financial guidance for your staking identity.
               </p>
            </div>
         </div>

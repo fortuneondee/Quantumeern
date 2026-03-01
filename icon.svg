@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a0a0a0;stop-opacity:1" />
+    </linearGradient>
+    <clipPath id="clip">
+      <rect width="512" height="512" rx="120" ry="120" />
+    </clipPath>
+  </defs>
+  <rect width="512" height="512" fill="#000000" rx="120" ry="120" />
+  
+  <!-- Geometric node accents -->
+  <g opacity="0.1" clip-path="url(#clip)">
+    <circle cx="512" cy="0" r="200" fill="white" />
+    <circle cx="0" cy="512" r="150" fill="white" />
+    <rect x="400" y="400" width="100" height="100" fill="white" transform="rotate(45 450 450)" />
+  </g>
+
+  <!-- Pip upward arrow indicator -->
+  <path d="M420 120 L420 200 M420 120 L340 120 M420 120 L320 220" stroke="white" stroke-width="20" stroke-linecap="square" />
+
+  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="url(#iconGrad)" font-family="'Inter', sans-serif" font-weight="900" font-size="240" letter-spacing="-15">PP</text>
+  
+  <!-- Subtitle -->
+  <text x="50%" y="82%" dominant-baseline="middle" text-anchor="middle" fill="white" opacity="0.3" font-family="'Inter', sans-serif" font-weight="800" font-size="32" letter-spacing="15">PROFIT PIPS</text>
+</svg>

@@ -1,0 +1,132 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // USERS
+    match /users/{userId} {
+      // Allow reading profiles for referral lookups and admin management
+      allow read: if isSignedIn();
+      
+      // User can create their own profile on signup
+      allow create: if isOwner(userId);
+      
+      // Update Rules:
+      // 1. Owner can update their own profile (any field)
+      // 2. Admin can update anyone (any field)
+      // 3. Referral System / Commission Logic: 
+      //    Authenticated users can update specific counters/balances on *other* users (e.g., uplines)
+      allow update: if 
+        isOwner(userId) || 
+        isAdmin() ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['referralCount', 'profitBalance', 'referralEarnings', 'totalEarned']));
+    }
+
+    // REFERRALS (Linkage Records)
+    match /referrals/{userId} {
+      // Allow read if signed in (Simplified for performance)
+      allow read: if isSignedIn();
+      
+      // User creates/updates their own referral linkage record
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+    }
+
+    // REFERRAL CODES (Global Lookup)
+    match /referral_codes/{code} {
+      allow read: if true; // Public read needed for registration validation
+      allow write: if isSignedIn(); // User registers their code
+    }
+
+    // PACKAGES (Nodes)
+    match /packages/{pkgId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ACTIVE PACKAGES (Investments)
+    match /activePackages/{apId} {
+      // Owner can read/write their own packages
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow updates for ROI processing (triggered by client owner or admin)
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // TRANSACTIONS
+    match /transactions/{txId} {
+      // Users can read their own transactions, Admin can read all
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Create Rules:
+      // 1. Owner creating their own transaction (Deposit, Withdrawal, Purchase, etc)
+      // 2. Admin creating transaction (Credit, Sweep, etc)
+      // 3. User creating a REFERRAL commission transaction for their upline (userId != auth.uid)
+      allow create: if isSignedIn() && (
+        request.resource.data.userId == request.auth.uid || 
+        isAdmin() ||
+        request.resource.data.type == 'REFERRAL'
+      );
+      
+      allow update: if isAdmin();
+    }
+
+    // GIVEAWAY POOLS
+    match /giveawayPools/{poolId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      // Allow users to increment claim count when claiming
+      allow update: if isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimsCount']));
+      allow delete: if isAdmin();
+    }
+
+    // GIVEAWAY CLAIMS
+    match /giveawayClaims/{claimId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // SYSTEM SETTINGS
+    match /system/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // SYSTEM BANKS
+    match /system_banks/{bankId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // FIAT REQUESTS
+    match /fiat_requests/{reqId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+    }
+
+    // VAULT (Admin Keys)
+    match /vault/{docId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

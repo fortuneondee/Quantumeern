@@ -1,13 +1,14 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { APP_NAME } from '../constants.tsx';
 
 interface LandingPageProps {
   onLogin: () => void;
   onRegister: () => void;
+  appName: string;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, appName }) => {
   const fadeInUp = {
     hidden: { opacity: 0, y: 40 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "circOut" } }
@@ -32,7 +33,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister }) => {
             <div className="w-8 h-8 bg-app-accent flex items-center justify-center">
               <div className="w-4 h-4 bg-app-bg"></div>
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase">{APP_NAME}</span>
+            <span className="text-xl font-black tracking-tighter uppercase">{appName}</span>
           </div>
           
           <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-app-muted">
@@ -69,7 +70,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister }) => {
             </motion.div>
             
             <motion.h1 variants={fadeInUp} className="text-7xl lg:text-9xl font-black uppercase tracking-tighter leading-[0.85] mb-8">
-              Quantum Node <br/>
+              Profit Node <br/>
               <span className="text-app-muted">Infrastructure.</span>
             </motion.h1>
             
@@ -219,7 +220,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister }) => {
          <div className="max-w-4xl mx-auto space-y-16">
             <div className="text-center space-y-4">
               <h2 className="text-4xl font-black uppercase tracking-tighter">Frequently Asked Questions</h2>
-              <p className="serif italic text-app-muted">Everything you need to know about the Quantum Platform.</p>
+              <p className="serif italic text-app-muted">Everything you need to know about the {appName} Platform.</p>
             </div>
 
             <div className="space-y-4">
@@ -261,7 +262,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister }) => {
          </div>
 
          <div className="max-w-[1400px] mx-auto mt-32 pt-8 border-t border-app-border flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-app-muted">
-            <p>© 2024 {APP_NAME} Protocol. All rights reserved.</p>
+            <p>© 2024 {appName} Protocol. All rights reserved.</p>
             <div className="flex gap-8">
                <a href="#" className="hover:text-app-text">Privacy Policy</a>
                <a href="#" className="hover:text-app-text">Terms of Service</a>
@@ -269,6 +270,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister }) => {
             </div>
          </div>
       </footer>
+
+      {/* Floating Telegram Support Button */}
+      <a
+        href="https://t.me/Profitpipsnodes"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-[100] w-14 h-14 bg-app-accent text-app-accent-text rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all duration-300"
+        title="Contact Support"
+      >
+        <i className="fa-brands fa-telegram text-3xl"></i>
+      </a>
     </div>
   );
 };
