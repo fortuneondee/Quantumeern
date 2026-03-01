@@ -781,13 +781,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                <div className="flex items-center gap-4">
                    <span className="text-[10px] font-bold text-app-muted uppercase">Status</span>
                    <button 
-                      onClick={() => {
-                        const newSettings = { ...state.korapaySettings, deposits_enabled: !state.korapaySettings?.deposits_enabled };
-                        onUpdateSettings({ korapaySettings: newSettings as any });
-                      }} 
-                      className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${state.korapaySettings?.deposits_enabled ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
+                      onClick={() => setKorapayConfig({...korapayConfig, depositsEnabled: !korapayConfig.depositsEnabled})}
+                      className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${korapayConfig.depositsEnabled ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
                    >
-                     {state.korapaySettings?.deposits_enabled ? 'ACTIVE' : 'DISABLED'}
+                     {korapayConfig.depositsEnabled ? 'ACTIVE' : 'DISABLED'}
                    </button>
                </div>
            </div>
@@ -797,8 +794,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                     <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Public Key</label>
                     <input 
                       type="text" 
-                      value={state.korapaySettings?.public_key || ''} 
-                      onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, public_key: e.target.value } as any })} 
+                      value={korapayConfig.publicKey || ''} 
+                      onChange={(e) => setKorapayConfig({ ...korapayConfig, publicKey: e.target.value })} 
                       className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none" 
                       placeholder="pk_..." 
                     />
@@ -807,8 +804,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                     <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Secret Key</label>
                     <input 
                       type="password" 
-                      value={state.korapaySettings?.secret_key || ''} 
-                      onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, secret_key: e.target.value } as any })} 
+                      value={korapayConfig.secretKey || ''} 
+                      onChange={(e) => setKorapayConfig({ ...korapayConfig, secretKey: e.target.value })} 
                       className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none" 
                       placeholder="sk_..." 
                     />
@@ -817,8 +814,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                     <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Webhook Secret</label>
                     <input 
                       type="password" 
-                      value={state.korapaySettings?.webhook_secret || ''} 
-                      onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, webhook_secret: e.target.value } as any })} 
+                      value={korapayConfig.webhookSecret || ''} 
+                      onChange={(e) => setKorapayConfig({ ...korapayConfig, webhookSecret: e.target.value })} 
                       className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none" 
                       placeholder="Webhook Secret" 
                     />
@@ -826,8 +823,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Mode</label>
                     <select 
-                      value={state.korapaySettings?.mode || 'sandbox'} 
-                      onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, mode: e.target.value as 'sandbox' | 'live' } as any })}
+                      value={korapayConfig.mode || 'sandbox'} 
+                      onChange={(e) => setKorapayConfig({ ...korapayConfig, mode: e.target.value as 'sandbox' | 'live' })}
                       className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none"
                     >
                       <option value="sandbox">Sandbox</option>
@@ -839,8 +836,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                       <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Min Deposit (NGN)</label>
                       <input 
                         type="number" 
-                        value={state.korapaySettings?.min_deposit || 0} 
-                        onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, min_deposit: Number(e.target.value) } as any })} 
+                        value={korapayConfig.minDeposit || 0} 
+                        onChange={(e) => setKorapayConfig({ ...korapayConfig, minDeposit: Number(e.target.value) })} 
                         className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none" 
                       />
                     </div>
@@ -848,8 +845,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                       <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Max Deposit (NGN)</label>
                       <input 
                         type="number" 
-                        value={state.korapaySettings?.max_deposit || 0} 
-                        onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, max_deposit: Number(e.target.value) } as any })} 
+                        value={korapayConfig.maxDeposit || 0} 
+                        onChange={(e) => setKorapayConfig({ ...korapayConfig, maxDeposit: Number(e.target.value) })} 
                         className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none" 
                       />
                     </div>
@@ -858,10 +855,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Charge Type</label>
                       <select 
-                        value={state.korapaySettings?.deposit_charge_type || 'fixed'} 
-                        onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, deposit_charge_type: e.target.value as 'fixed' | 'percentage' } as any })}
+                        value={korapayConfig.depositChargeType || 'fixed'} 
+                        onChange={(e) => setKorapayConfig({ ...korapayConfig, depositChargeType: e.target.value as 'fixed' | 'percentage' | 'none' })}
                         className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none"
                       >
+                        <option value="none">None</option>
                         <option value="fixed">Fixed Amount</option>
                         <option value="percentage">Percentage (%)</option>
                       </select>
@@ -870,8 +868,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
                       <label className="text-[10px] font-black uppercase tracking-widest text-app-muted">Charge Value</label>
                       <input 
                         type="number" 
-                        value={state.korapaySettings?.deposit_charge_value || 0} 
-                        onChange={(e) => onUpdateSettings({ korapaySettings: { ...state.korapaySettings, deposit_charge_value: Number(e.target.value) } as any })} 
+                        value={korapayConfig.depositChargeValue || 0} 
+                        onChange={(e) => setKorapayConfig({ ...korapayConfig, depositChargeValue: Number(e.target.value) })} 
                         className="w-full bg-app-bg border border-app-border p-4 text-sm font-mono text-app-text focus:border-app-accent outline-none" 
                       />
                     </div>
@@ -879,7 +877,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ state, onUpdateSettings, onTrig
               </div>
               <div className="pt-8 border-t border-app-border">
                 <button 
-                  onClick={() => alert('Korapay settings saved automatically when changed.')} 
+                  onClick={handleSaveKorapayConfig} 
                   className="px-12 py-4 bg-app-accent text-app-accent-text text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-90"
                 >
                   Save Configuration

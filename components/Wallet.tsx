@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, TransactionStatus, TransactionType, PaymentSettings, BankAccount, AppState, KorapaySettings } from '../types.ts';
 import { QRCodeCanvas } from 'qrcode.react';
-import { processExternalDeposit, requestFiatDeposit, requestFiatWithdrawal, fetchBankAccountsFirestore } from '../store.ts';
+import { processExternalDeposit, requestFiatDeposit, requestFiatWithdrawal, fetchBankAccountsFirestore, verifyAndCreditKorapayDeposit } from '../store.ts';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase.ts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,6 +44,7 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
   // Korapay State
   const [korapayAmount, setKorapayAmount] = useState('');
   const [isInitializingKorapay, setIsInitializingKorapay] = useState(false);
+  const [isVerifyingKorapay, setIsVerifyingKorapay] = useState(false);
   
   // Modal State
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -78,6 +79,72 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get('reference');
+    
+    if (reference && reference.startsWith('kp_') && korapaySettings?.secretKey && settings?.depositRateNgn) {
+      const verifyPayment = async () => {
+        setIsVerifyingKorapay(true);
+        try {
+          const targetUrl = `https://api.korapay.com/merchant/api/v1/charges/${reference}`;
+          const fetchOptions = {
+              method: 'GET',
+              headers: {
+                  'Authorization': `Bearer ${korapaySettings.secretKey}`,
+                  'Content-Type': 'application/json'
+              }
+          };
+
+          let res;
+          let data;
+          try {
+              res = await fetch(targetUrl, fetchOptions);
+              data = await res.json();
+          } catch (directErr) {
+              try {
+                  res = await fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl), fetchOptions);
+                  data = await res.json();
+              } catch (proxy1Err) {
+                  res = await fetch('https://thingproxy.freeboard.io/fetch/' + targetUrl, fetchOptions);
+                  data = await res.json();
+              }
+          }
+
+          if (data && data.status && data.data?.status === 'success') {
+             // Extract original amount from reference (kp_{timestamp}_{amount}_{random})
+             const parts = reference.split('_');
+             let amountNgn = data.data.amount; // fallback to total paid
+             if (parts.length >= 4) {
+                 const parsedAmount = parseFloat(parts[2]);
+                 if (!isNaN(parsedAmount)) {
+                     amountNgn = parsedAmount;
+                 }
+             }
+
+             await verifyAndCreditKorapayDeposit(reference, user.id, amountNgn, settings.depositRateNgn);
+             alert("Deposit successful! Your wallet has been credited.");
+          } else if (data && data.data?.status) {
+             console.log(`Payment status: ${data.data.status}`);
+          } else {
+             throw new Error("Invalid response during verification");
+          }
+        } catch (err: any) {
+          if (err.message !== "Transaction already processed") {
+             console.error("Verification error:", err);
+             alert(`Verification failed: ${err.message}`);
+          }
+        } finally {
+          setIsVerifyingKorapay(false);
+          // Remove reference from URL to prevent re-verification
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      };
+
+      verifyPayment();
+    }
+  }, [korapaySettings, settings, user.id]);
 
   const stopPolling = () => {
     if (pollTimeoutRef.current) {
@@ -217,19 +284,19 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
       console.error('Korapay server init error:', err);
       
       // FALLBACK: Client-Side Initialization (For Static Hosts like Netlify)
-      // Check if we have the secret key in settings (exposed via updated store logic)
       if (korapaySettings?.secretKey) {
           console.log("Attempting client-side fallback...");
           try {
-              const reference = `kp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+              // Format: kp_{timestamp}_{amount}_{random}
+              const reference = `kp_${Date.now()}_${amount}_${Math.random().toString(36).substring(7)}`;
               const charge = korapaySettings.depositChargeType === 'fixed' 
                   ? korapaySettings.depositChargeValue 
-                  : (amount * korapaySettings.depositChargeValue) / 100;
+                  : korapaySettings.depositChargeType === 'percentage'
+                  ? (amount * korapaySettings.depositChargeValue) / 100
+                  : 0;
               const totalAmount = amount + charge;
 
-              const proxyUrl = 'https://corsproxy.io/?';
               const targetUrl = 'https://api.korapay.com/merchant/api/v1/charges/initialize';
-              
               const payload = {
                   reference,
                   amount: totalAmount,
@@ -239,29 +306,50 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
                       email: user.email
                   },
                   redirect_url: `${window.location.origin}/wallet?status=success`,
-                  notification_url: `${window.location.origin}/api/korapay/webhook` // Won't work on static, but required field
+                  notification_url: `${window.location.origin}/api/korapay/webhook`
               };
 
-              const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+              const fetchOptions = {
                   method: 'POST',
                   headers: {
                       'Authorization': `Bearer ${korapaySettings.secretKey}`,
                       'Content-Type': 'application/json'
                   },
                   body: JSON.stringify(payload)
-              });
+              };
 
-              const data = await res.json();
-              if (data.status && data.data?.checkout_url) {
+              let res;
+              let data;
+              
+              try {
+                  // 1. Try direct fetch (in case Korapay allows CORS or we are on localhost)
+                  res = await fetch(targetUrl, fetchOptions);
+                  data = await res.json();
+              } catch (directErr) {
+                  console.log("Direct fetch failed (likely CORS), trying proxy 1...");
+                  try {
+                      // 2. Try corsproxy.io
+                      res = await fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl), fetchOptions);
+                      data = await res.json();
+                  } catch (proxy1Err) {
+                      console.log("Proxy 1 failed, trying proxy 2...");
+                      // 3. Try thingproxy
+                      res = await fetch('https://thingproxy.freeboard.io/fetch/' + targetUrl, fetchOptions);
+                      data = await res.json();
+                  }
+              }
+
+              if (data && data.status && data.data?.checkout_url) {
                   console.log("Client-side init success. Redirecting...");
                   window.location.href = data.data.checkout_url;
                   return;
               } else {
-                  throw new Error(data.message || "Client-side init failed");
+                  console.error("Korapay API returned error:", data);
+                  throw new Error(data?.message || "Invalid response from Korapay. Check your API keys.");
               }
           } catch (clientErr: any) {
               console.error("Client-side fallback failed:", clientErr);
-              alert("Payment Service Unavailable. Please contact support.");
+              alert(`Payment Error: ${clientErr.message || "Service Unavailable."}`);
           }
       } else {
           // Original Error Handling
@@ -403,7 +491,17 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
   const selectedBank = bankAccounts.find(b => b.id === selectedBankId);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-24 pb-24 lg:pb-0">
+    <div className="max-w-7xl mx-auto space-y-24 pb-24 lg:pb-0 relative">
+      {isVerifyingKorapay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-app-bg/80 backdrop-blur-sm">
+            <div className="bg-app-bg border border-app-border p-8 flex flex-col items-center gap-4 max-w-sm w-full mx-4 shadow-2xl">
+                <i className="fa-solid fa-circle-notch fa-spin text-4xl text-app-accent"></i>
+                <h3 className="text-sm font-black uppercase tracking-widest text-app-text text-center">Verifying Payment</h3>
+                <p className="text-xs text-app-muted text-center">Please wait while we confirm your deposit with Korapay...</p>
+            </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <h1 className="text-6xl lg:text-9xl font-black uppercase tracking-tighter leading-[0.85] text-app-text">My<br/>Wallet.</h1>
         <p className="serif italic text-2xl text-app-muted max-w-xl">

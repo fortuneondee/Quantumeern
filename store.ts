@@ -154,6 +154,44 @@ export const requestFiatWithdrawal = async (
   });
 };
 
+export const verifyAndCreditKorapayDeposit = async (
+  reference: string,
+  userId: string,
+  amountNgn: number,
+  exchangeRate: number
+) => {
+  const amountUsdt = amountNgn / exchangeRate;
+  const userRef = doc(db, 'users', userId);
+  const txRef = doc(db, 'transactions', reference); // Use reference as ID to prevent duplicates
+
+  await runTransaction(db, async (transaction) => {
+    const txSnap = await transaction.get(txRef);
+    if (txSnap.exists()) {
+      throw new Error("Transaction already processed");
+    }
+
+    const userSnap = await transaction.get(userRef);
+    if (!userSnap.exists()) {
+      throw new Error("User not found");
+    }
+
+    // Credit User
+    transaction.update(userRef, { capitalBalance: increment(amountUsdt) });
+
+    // Create Transaction Record
+    transaction.set(txRef, {
+      id: reference,
+      userId: userId,
+      type: TransactionType.FIAT_DEPOSIT,
+      amount: amountUsdt,
+      status: TransactionStatus.COMPLETED,
+      timestamp: Date.now(),
+      description: `Korapay Deposit (${amountNgn.toLocaleString()} NGN)`,
+      txHash: reference
+    });
+  });
+};
+
 export const processFiatDecision = async (
   requestId: string,
   action: 'APPROVE' | 'REJECT',
