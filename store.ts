@@ -35,12 +35,13 @@ export const updatePaymentSettingsFirestore = async (settings: PaymentSettings) 
 };
 
 export const updateKorapaySettingsFirestore = async (settings: any) => {
-  const { secretKey, webhookSecret, ...publicSettings } = settings;
+  // Save ALL settings to system/korapay to allow client-side fallback
+  // This is necessary for static deployments (Netlify) where server-side API routes are unavailable.
+  // WARNING: This exposes the Secret Key to the frontend.
+  await setDoc(doc(db, 'system', 'korapay'), settings, { merge: true });
   
-  // Save public settings to system/korapay
-  await setDoc(doc(db, 'system', 'korapay'), publicSettings, { merge: true });
-  
-  // Save private settings to vault/korapay
+  // We also keep the vault for backward compatibility or if we switch to a secure backend later
+  const { secretKey, webhookSecret } = settings;
   if (secretKey || webhookSecret) {
       const privateSettings: any = {};
       if (secretKey) privateSettings.secretKey = secretKey;

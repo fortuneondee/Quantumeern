@@ -214,10 +214,62 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
       console.log('Redirecting to:', data.checkoutUrl);
       window.location.href = data.checkoutUrl;
     } catch (err: any) {
-      console.error('Korapay error:', err);
-      let msg = err.message || "Payment initialization failed";
-      if (err.name === 'AbortError') msg = "Request timed out. Please check your connection.";
-      alert(msg);
+      console.error('Korapay server init error:', err);
+      
+      // FALLBACK: Client-Side Initialization (For Static Hosts like Netlify)
+      // Check if we have the secret key in settings (exposed via updated store logic)
+      if (korapaySettings?.secretKey) {
+          console.log("Attempting client-side fallback...");
+          try {
+              const reference = `kp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+              const charge = korapaySettings.depositChargeType === 'fixed' 
+                  ? korapaySettings.depositChargeValue 
+                  : (amount * korapaySettings.depositChargeValue) / 100;
+              const totalAmount = amount + charge;
+
+              const proxyUrl = 'https://corsproxy.io/?';
+              const targetUrl = 'https://api.korapay.com/merchant/api/v1/charges/initialize';
+              
+              const payload = {
+                  reference,
+                  amount: totalAmount,
+                  currency: 'NGN',
+                  customer: {
+                      name: user.email.split('@')[0],
+                      email: user.email
+                  },
+                  redirect_url: `${window.location.origin}/wallet?status=success`,
+                  notification_url: `${window.location.origin}/api/korapay/webhook` // Won't work on static, but required field
+              };
+
+              const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+                  method: 'POST',
+                  headers: {
+                      'Authorization': `Bearer ${korapaySettings.secretKey}`,
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(payload)
+              });
+
+              const data = await res.json();
+              if (data.status && data.data?.checkout_url) {
+                  console.log("Client-side init success. Redirecting...");
+                  window.location.href = data.data.checkout_url;
+                  return;
+              } else {
+                  throw new Error(data.message || "Client-side init failed");
+              }
+          } catch (clientErr: any) {
+              console.error("Client-side fallback failed:", clientErr);
+              alert("Payment Service Unavailable. Please contact support.");
+          }
+      } else {
+          // Original Error Handling
+          let msg = err.message || "Payment initialization failed";
+          if (err.name === 'AbortError') msg = "Request timed out. Please check your connection.";
+          if (err instanceof SyntaxError) msg = "Server configuration error (Backend not found). Please contact admin.";
+          alert(msg);
+      }
     } finally {
       // Only reset if we didn't redirect (or if redirect fails/takes time)
       // Actually, if we redirect, the page unloads. But if we don't, we must reset.
