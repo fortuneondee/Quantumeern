@@ -279,6 +279,7 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
 
       // Redirect to checkout
       console.log('Redirecting to:', data.checkoutUrl);
+      console.log('Redirect URL being sent to Korapay:', `${window.location.origin}/wallet?reference=${reference}`);
       window.location.href = data.checkoutUrl;
     } catch (err: any) {
       console.error('Korapay server init error:', err);
