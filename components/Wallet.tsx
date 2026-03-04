@@ -305,7 +305,7 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
                       name: user.email.split('@')[0],
                       email: user.email
                   },
-                  redirect_url: `${window.location.origin}/wallet?status=success`,
+                  redirect_url: `${window.location.origin}/wallet?reference=${reference}`,
                   notification_url: `${window.location.origin}/api/korapay/webhook`
               };
 
