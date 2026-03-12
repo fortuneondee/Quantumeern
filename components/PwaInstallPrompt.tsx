@@ -8,23 +8,29 @@ const PwaInstallPrompt: React.FC = () => {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    console.log('[PWA] Checking install eligibility...');
+    
     // Detect Standalone Mode
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
                                (window.navigator as any).standalone || 
                                document.referrer.includes('android-app://');
     
+    console.log('[PWA] Is standalone:', isInStandaloneMode);
     setIsStandalone(isInStandaloneMode);
     if (isInStandaloneMode) return;
 
     // Detect iOS
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    console.log('[PWA] Is iOS:', isIosDevice);
     setIsIOS(isIosDevice);
 
     // Check if user has already dismissed
     const isDismissed = localStorage.getItem('pwa_prompt_dismissed');
+    console.log('[PWA] Is dismissed:', isDismissed);
     
     const handleBeforeInstallPrompt = (e: any) => {
+      console.log('[PWA] beforeinstallprompt event fired!');
       e.preventDefault();
       setDeferredPrompt(e);
       if (!isDismissed) {
@@ -37,6 +43,7 @@ const PwaInstallPrompt: React.FC = () => {
 
     // iOS Trigger
     if (isIosDevice && !isDismissed) {
+      console.log('[PWA] iOS trigger scheduled');
       setTimeout(() => setShowPrompt(true), 4000);
     }
 
