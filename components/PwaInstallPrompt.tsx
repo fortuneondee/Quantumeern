@@ -21,8 +21,8 @@ const PwaInstallPrompt: React.FC = () => {
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
-    // Check if user has already dismissed for this session
-    const isDismissed = sessionStorage.getItem('pwa_prompt_dismissed_session');
+    // Check if user has already dismissed
+    const isDismissed = localStorage.getItem('pwa_prompt_dismissed');
     
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
@@ -58,7 +58,7 @@ const PwaInstallPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    sessionStorage.setItem('pwa_prompt_dismissed_session', 'true');
+    localStorage.setItem('pwa_prompt_dismissed', 'true');
   };
 
   if (!showPrompt || isStandalone) return null;
