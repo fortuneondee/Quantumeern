@@ -382,7 +382,6 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
     setPaymentStatus('waiting');
 
     try {
-        const proxyUrl = 'https://corsproxy.io/?';
         const targetUrl = 'https://api.nowpayments.io/v1/payment';
         
         const payload: any = {
@@ -392,27 +391,41 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
             order_description: `Deposit User:${user.id}`
         };
 
-        const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+        const fetchOptions = {
             method: 'POST',
             headers: {
                 'x-api-key': paymentSettings.apiKey,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
-        });
+        };
 
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.message || `API Error: ${response.statusText}`);
+        let res;
+        let data;
+        
+        try {
+            // 1. Try direct fetch
+            res = await fetch(targetUrl, fetchOptions);
+            data = await res.json();
+        } catch (directErr) {
+            console.log("Direct fetch failed, trying proxy 1...");
+            try {
+                // 2. Try corsproxy.io
+                res = await fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl), fetchOptions);
+                data = await res.json();
+            } catch (proxy1Err) {
+                console.log("Proxy 1 failed, trying proxy 2...");
+                // 3. Try thingproxy
+                res = await fetch('https://thingproxy.freeboard.io/fetch/' + targetUrl, fetchOptions);
+                data = await res.json();
+            }
         }
 
-        const data = await response.json();
-        
-        if (data.pay_address && data.payment_id) {
+        if (data && data.pay_address && data.payment_id) {
             setActivePayment(data);
             pollStatus(data.payment_id);
         } else {
-            setPaymentError("Gateway failed to generate address. Please try again.");
+            setPaymentError(data?.message || "Gateway failed to generate address. Please try again.");
         }
     } catch (err: any) {
         console.error("Payment Gen Error:", err);
@@ -426,16 +439,31 @@ const Wallet: React.FC<WalletProps> = ({ user, paymentSettings, korapaySettings,
     if (!isMounted.current) return;
 
     try {
-        const proxyUrl = 'https://corsproxy.io/?';
         const targetUrl = `https://api.nowpayments.io/v1/payment/${paymentId}`;
-        
-        const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+        const fetchOptions = {
             headers: { 'x-api-key': paymentSettings!.apiKey }
-        });
+        };
         
-        if (!res.ok) throw new Error("Status check failed");
+        let res;
+        let data;
+
+        try {
+            // 1. Try direct fetch
+            res = await fetch(targetUrl, fetchOptions);
+            data = await res.json();
+        } catch (directErr) {
+            try {
+                // 2. Try corsproxy.io
+                res = await fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl), fetchOptions);
+                data = await res.json();
+            } catch (proxy1Err) {
+                // 3. Try thingproxy
+                res = await fetch('https://thingproxy.freeboard.io/fetch/' + targetUrl, fetchOptions);
+                data = await res.json();
+            }
+        }
         
-        const data = await res.json();
+        if (!data || !data.payment_status) throw new Error("Status check failed");
         const status = data.payment_status;
         
         if(isMounted.current) setPaymentStatus(status);
