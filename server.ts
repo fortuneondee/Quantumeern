@@ -287,7 +287,7 @@ async function startServer() {
     app.use(express.static('dist'));
     
     // SPA fallback
-    app.get('.*', (req, res) => {
+    app.use((req, res) => {
       res.sendFile('dist/index.html', { root: '.' });
     });
   }
